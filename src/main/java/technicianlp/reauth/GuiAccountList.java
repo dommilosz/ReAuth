@@ -72,7 +72,7 @@ public class GuiAccountList extends GuiScreen {
 	}
 
 	@Override
-	protected void actionPerformed(GuiButton button) throws IOException {
+	protected void actionPerformed(GuiButton button) {
 		switch (button.id) {
 		case 0:
 			char[] pw = Secure.accounts.get(selectedAccount);
@@ -129,7 +129,7 @@ public class GuiAccountList extends GuiScreen {
 				i++;
 			}
 			if (isDoubleClick) {
-				actionPerformed(loginButton);
+				GuiAccountList.this.actionPerformed(loginButton);
 			}
 		}
 
@@ -159,6 +159,7 @@ public class GuiAccountList extends GuiScreen {
 					username = accName;
 					break;
 				}
+				i++;
 			}
 
 			String displayName = Secure.displayNames.get(username);
