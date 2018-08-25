@@ -47,7 +47,7 @@ public final class GuiHandler {
 
     public static void onActionPerformed(int buttonId) {
         if (buttonId == 17325) {
-            Minecraft.getMinecraft().displayGuiScreen(new GuiLogin(Minecraft.getMinecraft().currentScreen));
+            Minecraft.getMinecraft().displayGuiScreen(new GuiAccountList(Minecraft.getMinecraft().currentScreen));
         }
     }
 

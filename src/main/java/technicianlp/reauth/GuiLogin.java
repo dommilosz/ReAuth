@@ -15,6 +15,8 @@ import net.minecraft.client.gui.GuiTextField;
 
 final class GuiLogin extends GuiScreen {
 
+	private String startingAccount;
+	
     private GuiTextField username;
     private GuiPasswordField pw;
     private GuiButton login;
@@ -22,16 +24,23 @@ final class GuiLogin extends GuiScreen {
     private GuiButton offline;
     private GuiCheckbox save;
 
-    private GuiScreen prev;
+    private GuiScreen successPrevScreen;
+    private GuiScreen failPrevScreen;
 
     private int basey;
 
     private String message = "";
 
-    GuiLogin(GuiScreen prev) {
+    GuiLogin(GuiScreen successPrevScreen, GuiScreen failPrevScreen) {
+    	this(successPrevScreen, failPrevScreen, "");
+    }
+    
+    GuiLogin(GuiScreen successPrevScreen, GuiScreen failPrevScreen, String startingAccount) {
         this.mc = Minecraft.getMinecraft();
         this.fontRenderer = mc.fontRenderer;
-        this.prev = prev;
+        this.successPrevScreen = successPrevScreen;
+        this.failPrevScreen = failPrevScreen;
+        this.startingAccount = startingAccount;
     }
 
     @Override
@@ -39,17 +48,18 @@ final class GuiLogin extends GuiScreen {
         switch (b.id) {
             case 0:
                 if (login())
-                    this.mc.displayGuiScreen(prev);
+                    this.mc.displayGuiScreen(successPrevScreen);
                 break;
             case 3:
                 if (playOffline())
-                    this.mc.displayGuiScreen(prev);
+                    this.mc.displayGuiScreen(successPrevScreen);
                 break;
             case 1:
-                this.mc.displayGuiScreen(prev);
+                this.mc.displayGuiScreen(failPrevScreen);
                 break;
             case 2:
             	this.save.checked = !this.save.checked;
+            	break;
         }
 
     }
@@ -87,7 +97,7 @@ final class GuiLogin extends GuiScreen {
 
         this.username = new GuiTextField(0, this.fontRenderer, this.width / 2 - 155, this.basey + 15, 2 * 155, 20);
         this.username.setMaxStringLength(512);
-        this.username.setText(Secure.accounts.isEmpty() ? "" : Secure.accounts.keySet().iterator().next());
+        this.username.setText(startingAccount);
         this.username.setFocused(true);
 
         this.pw = new GuiPasswordField(this.fontRenderer, this.width / 2 - 155, this.basey + 60, 2 * 155, 20);

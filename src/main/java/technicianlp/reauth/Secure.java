@@ -46,7 +46,7 @@ final class Secure {
     /**
      * Logs you in; replaces the Session in your client; and saves to config
      */
-    static void login(String user, char[] pw, boolean savePassToConfig) throws AuthenticationException, IllegalArgumentException, IllegalAccessException {
+    static void login(String user, char[] pw, boolean savePassToConfig) throws AuthenticationException {
         /* set credentials */
         Secure.yua.setUsername(user);
         Secure.yua.setPassword(new String(pw));
@@ -73,7 +73,7 @@ final class Secure {
         LiteModReAuth.saveConfig();
     }
 
-    static void offlineMode(String username) throws IllegalArgumentException, IllegalAccessException {
+    static void offlineMode(String username) {
         /* Create offline uuid */
         UUID uuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(Charsets.UTF_8));
         Sessionutil.set(new Session(username, uuid.toString(), "invalid", "legacy"));
@@ -108,7 +108,7 @@ final class Secure {
             return Minecraft.getMinecraft().getSession();
         }
 
-        static void set(Session s) throws IllegalArgumentException, IllegalAccessException {
+        static void set(Session s) {
             ((ISessionHolder) Minecraft.getMinecraft()).setSession(s);
             GuiHandler.invalidateStatus();
         }
