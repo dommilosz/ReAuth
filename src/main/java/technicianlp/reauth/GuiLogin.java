@@ -1,15 +1,17 @@
 package technicianlp.reauth;
 
+import java.awt.Color;
+import java.io.IOException;
+
+import org.lwjgl.input.Keyboard;
+
 import com.mojang.authlib.exceptions.AuthenticationException;
+import com.mumfrey.liteloader.client.gui.GuiCheckbox;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
-import net.minecraftforge.fml.client.config.GuiCheckBox;
-import org.lwjgl.input.Keyboard;
-
-import java.awt.Color;
-import java.io.IOException;
 
 final class GuiLogin extends GuiScreen {
 
@@ -18,8 +20,7 @@ final class GuiLogin extends GuiScreen {
     private GuiButton login;
     private GuiButton cancel;
     private GuiButton offline;
-    private GuiCheckBox save;
-    private GuiButton config;
+    private GuiCheckbox save;
 
     private GuiScreen prev;
 
@@ -46,9 +47,6 @@ final class GuiLogin extends GuiScreen {
                 break;
             case 1:
                 this.mc.displayGuiScreen(prev);
-                break;
-            case 4:
-                this.mc.displayGuiScreen(new ConfigGUI(this));
                 break;
         }
 
@@ -87,16 +85,16 @@ final class GuiLogin extends GuiScreen {
 
         this.username = new GuiTextField(0, this.fontRenderer, this.width / 2 - 155, this.basey + 15, 2 * 155, 20);
         this.username.setMaxStringLength(512);
-        this.username.setText(Secure.username);
+        this.username.setText(Secure.accounts.isEmpty() ? "" : Secure.accounts.keySet().iterator().next());
         this.username.setFocused(true);
 
         this.pw = new GuiPasswordField(this.fontRenderer, this.width / 2 - 155, this.basey + 60, 2 * 155, 20);
-        this.pw.setPassword(Secure.password);
+        this.pw.setPassword(Secure.accounts.get(this.username.getText()));
 
-        this.save = new GuiCheckBox(2, this.width / 2 - 155, this.basey + 85, "Save Password to Config (WARNING: SECURITY RISK!)", false);
+        this.save = new GuiCheckbox(2, this.width / 2 - 155, this.basey + 85, "Save Password to Config (WARNING: SECURITY RISK!)");
         this.buttonList.add(this.save);
 
-        if (!Main.OfflineModeEnabled) {
+        if (!LiteModReAuth.offlineModeEnabled) {
             this.login = new GuiButton(0, this.width / 2 - 155, this.basey + 105, 153, 20, "Login");
             this.cancel = new GuiButton(1, this.width / 2 + 2, this.basey + 105, 155, 20, "Cancel");
             this.buttonList.add(this.login);
@@ -108,17 +106,6 @@ final class GuiLogin extends GuiScreen {
             this.buttonList.add(this.login);
             this.buttonList.add(this.cancel);
             this.buttonList.add(this.offline);
-        }
-
-        this.config = new GuiButton(4, this.width - 80, this.height - 25, 75, 20, "Config");
-        this.buttonList.add(config);
-
-        if (!VersionChecker.isLatestVersion()) {
-            this.message = VersionChecker.getUpdateMessage();
-        }
-        if (!VersionChecker.isVersionAllowed()) {
-            this.message = VersionChecker.getUpdateMessage();
-            this.login.enabled = false;
         }
     }
 
@@ -154,16 +141,16 @@ final class GuiLogin extends GuiScreen {
      */
     private boolean login() {
         try {
-            Secure.login(this.username.getText(), this.pw.getPW(), this.save.isChecked());
+            Secure.login(this.username.getText(), this.pw.getPW(), this.save.checked);
             this.message = (char) 167 + "aLogin successful!";
             return true;
         } catch (AuthenticationException e) {
             this.message = (char) 167 + "4Login failed: " + e.getMessage();
-            Main.log.error("Login failed:", e);
+            LiteModReAuth.log.error("Login failed:", e);
             return false;
         } catch (Exception e) {
             this.message = (char) 167 + "4Error: Something went wrong!";
-            Main.log.error("Error:", e);
+            LiteModReAuth.log.error("Error:", e);
             return false;
         }
     }
@@ -186,7 +173,7 @@ final class GuiLogin extends GuiScreen {
             return true;
         } catch (Exception e) {
             this.message = (char) 167 + "4Error: Something went wrong!";
-            Main.log.error("Error:", e);
+            LiteModReAuth.log.error("Error:", e);
             return false;
         }
     }

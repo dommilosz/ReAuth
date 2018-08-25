@@ -4,13 +4,10 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.util.ChatAllowedCharacters;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
 import org.lwjgl.input.Keyboard;
 
 import java.util.Arrays;
 
-@SideOnly(Side.CLIENT)
 final class GuiPasswordField extends GuiTextField {
 
     GuiPasswordField(FontRenderer renderer, int posx, int posy, int x, int y) {
@@ -99,6 +96,8 @@ final class GuiPasswordField extends GuiTextField {
     }
 
     final void setPassword(char[] password) {
+    	if (password == null)
+    		password = new char[0];
         Arrays.fill(this.password, 'f');
         this.password = new char[password.length];
         System.arraycopy(password, 0, this.password, 0, password.length);
