@@ -1,5 +1,6 @@
 package technicianlp.reauth;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -18,8 +19,12 @@ import net.minecraft.util.Session;
 
 final class Secure {
 
+	/**
+	 * Username/email -> display name map
+	 */
+	static Map<String, String> displayNames = new HashMap<>();
     /**
-     * Username/email
+     * Username/email -> password map
      */
     static Map<String, char[]> accounts = new LinkedHashMap<>();
     static String offlineUsername = "";
@@ -62,7 +67,8 @@ final class Secure {
         Secure.yua.logOut();
 
         /* save username and password to config */
-        Secure.accounts.put(username, savePassToConfig ? pw : null);
+        Secure.accounts.put(user, savePassToConfig ? pw : null);
+        Secure.displayNames.put(user, username);
         
         LiteModReAuth.saveConfig();
     }

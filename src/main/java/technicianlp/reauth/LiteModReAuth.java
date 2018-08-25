@@ -16,7 +16,7 @@ import com.mumfrey.liteloader.core.LiteLoader;
 public class LiteModReAuth implements LiteMod {
 
 	static boolean offlineModeEnabled;
-	
+
 	static final Logger log = LogManager.getLogger("ReAuth");
 
 	@Override
@@ -57,6 +57,8 @@ public class LiteModReAuth implements LiteMod {
 				String pass = config.getProperty("password." + accNo);
 				char[] pw = pass == null ? null : pass.toCharArray();
 				Secure.accounts.put(user, pw);
+				String displayName = config.getProperty("displayName." + accNo, user);
+				Secure.displayNames.put(user, displayName);
 			}
 
 			LiteModReAuth.offlineModeEnabled = Boolean.parseBoolean(config.getProperty("offlineModeEnabled", "false"));
@@ -78,6 +80,7 @@ public class LiteModReAuth implements LiteMod {
 			config.setProperty("username." + accNo, acc.getKey());
 			if (acc.getValue() != null)
 				config.setProperty("password." + accNo, new String(acc.getValue()));
+			config.setProperty("displayName." + accNo, Secure.displayNames.get(acc.getKey()));
 			accNo++;
 		}
 
