@@ -6,3 +6,4 @@ build.number
 *.launch
 /.project
 /.classpath
+/run/

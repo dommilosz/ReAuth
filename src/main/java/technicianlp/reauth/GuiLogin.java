@@ -48,6 +48,8 @@ final class GuiLogin extends GuiScreen {
             case 1:
                 this.mc.displayGuiScreen(prev);
                 break;
+            case 2:
+            	this.save.checked = !this.save.checked;
         }
 
     }
