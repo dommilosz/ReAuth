@@ -1,5 +1,6 @@
 package technicianlp.reauth;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.UUID;
 import com.google.common.base.Charsets;
 import com.mojang.authlib.Agent;
 import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.GameProfileRepository;
 import com.mojang.authlib.exceptions.AuthenticationException;
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
@@ -15,6 +17,9 @@ import com.mojang.authlib.yggdrasil.YggdrasilUserAuthentication;
 import com.mojang.util.UUIDTypeAdapter;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.management.PlayerProfileCache;
+import net.minecraft.tileentity.TileEntitySkull;
 import net.minecraft.util.Session;
 
 final class Secure {
@@ -41,6 +46,13 @@ final class Secure {
         yas = new YggdrasilAuthenticationService(Minecraft.getMinecraft().getProxy(), UUID.randomUUID().toString());
         yua = (YggdrasilUserAuthentication) yas.createUserAuthentication(Agent.MINECRAFT);
         ymss = (YggdrasilMinecraftSessionService) yas.createMinecraftSessionService();
+    }
+    
+    public static void initSkinStuff() {
+        GameProfileRepository gpr = yas.createProfileRepository();
+        PlayerProfileCache ppc = new PlayerProfileCache(gpr, new File(Minecraft.getMinecraft().mcDataDir, MinecraftServer.USER_CACHE_FILE.getName()));
+        TileEntitySkull.setProfileCache(ppc);
+        TileEntitySkull.setSessionService(ymss);
     }
 
     /**

@@ -16,6 +16,7 @@ import net.minecraft.client.gui.GuiSlot;
 import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.tileentity.TileEntitySkull;
 import net.minecraft.util.ResourceLocation;
 
 public class GuiAccountList extends GuiScreen {
@@ -55,6 +56,8 @@ public class GuiAccountList extends GuiScreen {
 		}
 
 		accountList = new GuiSlotAccounts(mc, width, height, 50, height - 60, 38);
+
+		Secure.initSkinStuff();
 	}
 
 	@Override
@@ -166,6 +169,7 @@ public class GuiAccountList extends GuiScreen {
 			drawString(fontRenderer, displayName, xPos + 50, yPos + 10, 0xffffff);
 
 			GameProfile gameProfile = new GameProfile(null, displayName);
+			gameProfile = TileEntitySkull.updateGameprofile(gameProfile);
 			Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> profileTextures = Minecraft.getMinecraft()
 					.getSkinManager().loadSkinFromCache(gameProfile);
 			ResourceLocation skinLocation;
