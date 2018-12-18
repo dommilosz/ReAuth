@@ -4,6 +4,6 @@ import net.minecraft.client.gui.GuiButton;
 
 public interface IGuiScreen {
 
-	<T extends GuiButton> T doAddButton(T button);
-	
+    <T extends GuiButton> T doAddButton(T button);
+
 }

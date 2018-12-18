@@ -10,18 +10,18 @@ import technicianlp.reauth.ISessionHolder;
 @Mixin(Minecraft.class)
 public class MixinMinecraft implements ISessionHolder {
 
-	@Shadow
-	private Session session;
+    @Shadow
+    private Session session;
 
-	@Override
-	@Shadow
-	public Session getSession() {
-		return null;
-	}
+    @Override
+    @Shadow
+    public Session getSession() {
+        return null;
+    }
 
-	@Override
-	public void setSession(Session session) {
-		this.session = session;
-	}
-	
+    @Override
+    public void setSession(Session session) {
+        this.session = session;
+    }
+
 }

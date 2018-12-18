@@ -12,14 +12,14 @@ import technicianlp.reauth.GuiHandler;
 @Mixin(GuiMainMenu.class)
 public class MixinGuiMainMenu {
 
-	@Inject(method = "initGui", at = @At("TAIL") )
-	public void onInitGui(CallbackInfo ci) {
-		GuiHandler.openGuiMainMenu((GuiMainMenu) (Object) this);
-	}
+    @Inject(method = "initGui", at = @At("TAIL"))
+    public void onInitGui(CallbackInfo ci) {
+        GuiHandler.openGuiMainMenu((GuiMainMenu) (Object) this);
+    }
 
-	@Inject(method = "actionPerformed", at = @At("TAIL") )
-	public void onActionPerformed(GuiButton button, CallbackInfo ci) {
-		GuiHandler.onActionPerformed(button.id);
-	}
+    @Inject(method = "actionPerformed", at = @At("TAIL"))
+    public void onActionPerformed(GuiButton button, CallbackInfo ci) {
+        GuiHandler.onActionPerformed(button.id);
+    }
 
 }

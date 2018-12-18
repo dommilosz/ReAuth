@@ -13,7 +13,7 @@ apply plugin: 'java'
 apply plugin: 'net.minecraftforge.gradle.liteloader'
 apply plugin: 'org.spongepowered.mixin'
 
-version = "3.6.0"
+version = "3.6.1"
 group = "technicianlp"
 archivesBaseName = "reauth"
 
@@ -23,9 +23,9 @@ compileJava {
 }
 
 minecraft {
-    version = "1.12"
+    version = "1.12.2"
     runDir = "run"
-    mappings = "snapshot_20171015"
+    mappings = "snapshot_20171104"
 	makeObfSourceJar = false
 }
 litemod {

@@ -10,12 +10,12 @@ import technicianlp.reauth.IGuiScreen;
 @Mixin(GuiScreen.class)
 public abstract class MixinGuiScreen implements IGuiScreen {
 
-	@Shadow
-	protected abstract <T extends GuiButton> T addButton(T button);
+    @Shadow
+    protected abstract <T extends GuiButton> T addButton(T button);
 
-	@Override
-	public <T extends GuiButton> T doAddButton(T button) {
-		return addButton(button);
-	}
-	
+    @Override
+    public <T extends GuiButton> T doAddButton(T button) {
+        return addButton(button);
+    }
+
 }

@@ -24,14 +24,10 @@ import net.minecraft.util.Session;
 
 final class Secure {
 
-	/**
-	 * Username/email -> display name map
-	 */
-	static Map<String, String> displayNames = new HashMap<>();
     /**
      * Username/email -> password map
      */
-    static Map<String, char[]> accounts = new LinkedHashMap<>();
+    static Map<String, Account> accounts = new LinkedHashMap<>();
     static String offlineUsername = "";
 
     /**
@@ -47,7 +43,7 @@ final class Secure {
         yua = (YggdrasilUserAuthentication) yas.createUserAuthentication(Agent.MINECRAFT);
         ymss = (YggdrasilMinecraftSessionService) yas.createMinecraftSessionService();
     }
-    
+
     public static void initSkinStuff() {
         GameProfileRepository gpr = yas.createProfileRepository();
         PlayerProfileCache ppc = new PlayerProfileCache(gpr, new File(Minecraft.getMinecraft().mcDataDir, MinecraftServer.USER_CACHE_FILE.getName()));
@@ -70,18 +66,18 @@ final class Secure {
 
         /* put together the new Session with the auth-data */
         String username = Secure.yua.getSelectedProfile().getName();
-        String uuid = UUIDTypeAdapter.fromUUID(Secure.yua.getSelectedProfile().getId());
+        UUID uuid = Secure.yua.getSelectedProfile().getId();
+        String uuidStr = UUIDTypeAdapter.fromUUID(uuid);
         String access = Secure.yua.getAuthenticatedToken();
         String type = Secure.yua.getUserType().getName();
-        Sessionutil.set(new Session(username, uuid, access, type));
+        Sessionutil.set(new Session(username, uuidStr, access, type));
 
         /* logout to discard the credentials in the object */
         Secure.yua.logOut();
 
         /* save username and password to config */
-        Secure.accounts.put(user, savePassToConfig ? pw : null);
-        Secure.displayNames.put(user, username);
-        
+        Secure.accounts.put(user, new Account(user, savePassToConfig ? pw : null, uuid, username));
+
         LiteModReAuth.saveConfig();
     }
 
@@ -104,11 +100,11 @@ final class Secure {
 
             Secure.ymss.joinServer(gp, token, id);
             if (Secure.ymss.hasJoinedServer(gp, id, null).isComplete()) {
-            	LiteModReAuth.log.info("Session validation successful");
+                LiteModReAuth.log.info("Session validation successful");
                 return true;
             }
         } catch (Exception e) {
-        	LiteModReAuth.log.info("Session validation failed: " + e.getMessage());
+            LiteModReAuth.log.info("Session validation failed: " + e.getMessage());
             return false;
         }
         LiteModReAuth.log.info("Session validation failed!");
@@ -126,4 +122,46 @@ final class Secure {
         }
     }
 
+    static class Account {
+        private String username;
+        private char[] password;
+        private UUID uuid;
+        private String displayName;
+        private long lastQuery = 0;
+
+        Account(String username, char[] password, UUID uuid, String displayName) {
+            this.username = username;
+            this.password = password;
+            this.uuid = uuid;
+            this.displayName = displayName;
+        }
+
+        String getUsername() {
+            return username;
+        }
+
+        char[] getPassword() {
+            return password;
+        }
+
+        UUID getUuid() {
+            return uuid;
+        }
+
+        String getDisplayName() {
+            return displayName;
+        }
+
+        public void setUuid(UUID uuid) {
+            this.uuid = uuid;
+        }
+
+        public void setLastQuery(long lastQuery) {
+            this.lastQuery = lastQuery;
+        }
+
+        public long getLastQuery() {
+            return lastQuery;
+        }
+    }
 }
