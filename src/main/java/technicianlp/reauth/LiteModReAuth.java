@@ -4,14 +4,16 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Properties;
-import java.util.UUID;
+import java.security.SecureRandom;
+import java.util.*;
 
+import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.core.LiteLoader;
+import static technicianlp.reauth.Secure.Account;
 
 public class LiteModReAuth implements LiteMod {
 
@@ -37,8 +39,10 @@ public class LiteModReAuth implements LiteMod {
     @Override
     public void upgradeSettings(String version, File configPath, File oldConfigPath) {
     }
-
-    private static void loadConfig(File configFile) {
+    public static void loadConfigDefault(){
+        loadConfig(new File(LiteLoader.getCommonConfigFolder(), ".ReAuth.properties"));
+    }
+    public static void loadConfig(File configFile) {
         Properties config = new Properties();
         try {
             config.load(new FileReader(configFile));
@@ -50,17 +54,10 @@ public class LiteModReAuth implements LiteMod {
             int numAccounts = Integer.parseInt(config.getProperty("accounts", "0"));
             if (numAccounts > 1000) // who has more than 1000 accounts anyway?
                 numAccounts = 1000;
-            for (int accNo = 0; accNo < numAccounts; accNo++) {
-                String user = config.getProperty("username." + accNo);
-                if (user == null)
-                    continue;
-                String pass = config.getProperty("password." + accNo);
-                char[] pw = pass == null ? null : pass.toCharArray();
-                String uuidStr = config.getProperty("uuid." + accNo);
-                UUID uuid = uuidStr == null ? null : UUID.fromString(uuidStr);
-                String displayName = config.getProperty("displayName." + accNo, user);
-                Secure.accounts.put(user, new Secure.Account(user, pw, uuid, displayName));
-            }
+            Gson g = new Gson();
+            Secure.accounts.clear();
+            configAccount[] accounts = g.fromJson(config.getProperty("accounts_data"), configAccount[].class);
+            Secure.accounts = configAccount.toSecureAccounts(accounts);
 
             LiteModReAuth.offlineModeEnabled = Boolean.parseBoolean(config.getProperty("offlineModeEnabled", "false"));
 
@@ -76,16 +73,8 @@ public class LiteModReAuth implements LiteMod {
         Properties config = new Properties();
         config.setProperty("accounts", String.valueOf(Secure.accounts.size()));
 
-        int accNo = 0;
-        for (Secure.Account acc : Secure.accounts.values()) {
-            config.setProperty("username." + accNo, acc.getUsername());
-            if (acc.getPassword() != null)
-                config.setProperty("password." + accNo, new String(acc.getPassword()));
-            config.setProperty("displayName." + accNo, acc.getDisplayName());
-            if (acc.getUuid() != null)
-                config.setProperty("uuid." + accNo, acc.getUuid().toString());
-            accNo++;
-        }
+        Gson g = new Gson();
+        config.setProperty("accounts_data", g.toJson(configAccount.getConfigAccounts()));
 
         config.setProperty("offlineModeEnabled", String.valueOf(LiteModReAuth.offlineModeEnabled));
 
@@ -97,6 +86,38 @@ public class LiteModReAuth implements LiteMod {
                     "ReAuth configuration file");
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public static class configAccount{
+        public String key;
+        public Secure.Account account;
+
+        public configAccount(String key, Account account) {
+            this.key = key;
+            this.account = account;
+        }
+
+        public static configAccount[] getConfigAccounts(){
+            configAccount[] accountsArr = new configAccount[Secure.accounts.size()];
+            final int[] i = {0};
+            Secure.accounts.forEach((key, value)-> {
+                accountsArr[i[0]] = new configAccount(key,value);
+                i[0]++;
+            });
+            return accountsArr;
+        }
+
+        public static Map<String, Account> toSecureAccounts(configAccount[] accounts) {
+            Map<String, Account> accountMap = new LinkedHashMap<>();
+            for (configAccount acc:accounts){
+                if(acc.account.AccUUID!=null){
+                    acc.account.setLastQuery(0);
+                    accountMap.put(acc.key, acc.account);
+                }
+
+            }
+            return accountMap;
         }
     }
 

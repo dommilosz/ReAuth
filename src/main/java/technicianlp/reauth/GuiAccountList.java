@@ -1,6 +1,7 @@
 package technicianlp.reauth;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -9,10 +10,7 @@ import com.mojang.authlib.exceptions.AuthenticationException;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiErrorScreen;
-import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.gui.GuiSlot;
+import net.minecraft.client.gui.*;
 import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.player.EntityPlayer;
@@ -30,6 +28,7 @@ public class GuiAccountList extends GuiScreen {
     private GuiButton addButton;
     private GuiButton editButton;
     private GuiButton removeButton;
+    private GuiButton reloadButton;
 
     private Secure.Account selectedAccount = null;
     private GuiSlotAccounts accountList;
@@ -50,6 +49,7 @@ public class GuiAccountList extends GuiScreen {
         addButton(editButton = new GuiButton(2, start, height - 27, thirdWidth, 20, "Edit account"));
         addButton(removeButton = new GuiButton(3, width / 2 - thirdWidth / 2, height - 27, thirdWidth, 20, "Remove account"));
         addButton(cancelButton = new GuiButton(4, start + BUTTON_WIDTH - thirdWidth, height - 27, thirdWidth, 20, I18n.format("gui.cancel")));
+        addButton(reloadButton = new GuiButton(5, 5, 5, 100, 20, "Reload Accounts"));
         if (Secure.accounts.isEmpty()) {
             loginButton.enabled = false;
             editButton.enabled = false;
@@ -81,33 +81,31 @@ public class GuiAccountList extends GuiScreen {
     protected void actionPerformed(GuiButton button) {
         switch (button.id) {
             case 0:
-                if (selectedAccount.getPassword() == null) {
-                    mc.displayGuiScreen(new GuiLogin(parentScreen, this, selectedAccount));
-                } else {
-                    try {
-                        Secure.login(selectedAccount.getUsername(), selectedAccount.getPassword(), true);
-                        mc.displayGuiScreen(parentScreen);
-                    } catch (AuthenticationException e) {
-                        mc.displayGuiScreen(new GuiErrorScreen("ReAuth", "Authentication Failed"));
-                    }
+                try {
+                    selectedAccount.login();
+                } catch (Exception e) {
+                    mc.displayGuiScreen(new GuiErrorScreen("ReAuth", "Authentication Failed"));
                 }
                 break;
             case 1:
                 mc.displayGuiScreen(new GuiLogin(parentScreen, this));
                 break;
-            case 2:
-                Secure.accounts.remove(selectedAccount.getUsername());
+            case 3:
+                Secure.accounts.remove(selectedAccount.AccUUID);
                 if (Secure.accounts.isEmpty())
                     mc.displayGuiScreen(parentScreen);
                 else
                     selectedAccount = Secure.accounts.values().iterator().next();
                 LiteModReAuth.saveConfig();
                 break;
-            case 3:
+            case 2:
                 mc.displayGuiScreen(new GuiLogin(parentScreen, this, selectedAccount));
                 break;
             case 4:
                 mc.displayGuiScreen(parentScreen);
+                break;
+            case 5:
+                LiteModReAuth.loadConfigDefault();
                 break;
         }
     }
@@ -153,7 +151,7 @@ public class GuiAccountList extends GuiScreen {
         protected void drawBackground() {
             drawDefaultBackground();
         }
-
+        public Map<String,ResourceLocation> skins = new HashMap<>();
         @Override
         protected void drawSlot(int slotIndex, int xPos, int yPos, int heightIn, int mouseXIn, int mouseYIn,
                                 float partialTicks) {
@@ -175,7 +173,7 @@ public class GuiAccountList extends GuiScreen {
             drawString(fontRenderer, account.getUsername(), xPos + 50, yPos + 19, 0x777777);
 
             GameProfile gameProfile = new GameProfile(account.getUuid(), account.getDisplayName());
-            if (account.getLastQuery() + 10 * 60 * 1000 < System.currentTimeMillis()) {
+            if (account.getLastQuery() + 10 * 60 * 1000 < System.currentTimeMillis()||!skins.containsKey(account.getUuid().toString())) {
                 if (!gameProfile.getProperties().containsKey("textures") || !gameProfile.isComplete()) {
                     gameProfile = TileEntitySkull.updateGameprofile(gameProfile);
                     if (account.getUuid() == null) {
@@ -191,13 +189,31 @@ public class GuiAccountList extends GuiScreen {
             if (profileTextures.containsKey(MinecraftProfileTexture.Type.SKIN)) {
                 skinLocation = Minecraft.getMinecraft().getSkinManager().loadSkin(
                         profileTextures.get(MinecraftProfileTexture.Type.SKIN), MinecraftProfileTexture.Type.SKIN);
-            } else {
+                skins.put(account.getUuid().toString(),skinLocation);
+            } else if(skins.containsKey(account.getUuid().toString())) {
+                skinLocation = skins.get(account.getUuid().toString());
+            }else{
                 UUID id = EntityPlayer.getUUID(gameProfile);
                 skinLocation = DefaultPlayerSkin.getDefaultSkin(id);
             }
 
             Minecraft.getMinecraft().getTextureManager().bindTexture(skinLocation);
+            ResourceLocation SERVER_SELECTION_BUTTONS = new ResourceLocation("textures/gui/server_selection.png");
+
             drawScaledCustomSizeModalRect(xPos + 1, yPos + 1, 8, 8, 8, 8, 32, 32, 64, 64);
+            this.mc.getTextureManager().bindTexture(SERVER_SELECTION_BUTTONS);
+            if (true) {
+                Gui.drawModalRectWithCustomSizedTexture(xPos, yPos, 0.0F, 32.0F, 32, 32, 256.0F, 256.0F);
+            }
+
+            if (slotIndex<Secure.accounts.size()-1) {
+                Gui.drawModalRectWithCustomSizedTexture(xPos, yPos, 96.0F, 32.0F, 32, 32, 256.0F, 256.0F);
+
+            }
+
+            if (slotIndex>0) {
+                Gui.drawModalRectWithCustomSizedTexture(xPos, yPos, 64.0F, 32.0F, 32, 32, 256.0F, 256.0F);
+            }
         }
 
     }

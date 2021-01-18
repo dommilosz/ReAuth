@@ -3,6 +3,7 @@ package technicianlp.reauth;
 import java.awt.Color;
 import java.io.IOException;
 
+import net.minecraft.util.ResourceLocation;
 import org.lwjgl.input.Keyboard;
 
 import com.mojang.authlib.exceptions.AuthenticationException;
@@ -47,12 +48,21 @@ final class GuiLogin extends GuiScreen {
     protected void actionPerformed(GuiButton b) {
         switch (b.id) {
             case 0:
-                if (login())
+                if (login()) {
+                    if (startingAccount != null)
+                        Secure.accounts.remove(startingAccount.getUuid().toString(), startingAccount);
                     this.mc.displayGuiScreen(successPrevScreen);
+                }
+
                 break;
             case 3:
-                if (playOffline())
+                if (playOffline()) {
+                    if (startingAccount != null)
+                        Secure.accounts.remove(startingAccount.getUuid().toString(), startingAccount);
                     this.mc.displayGuiScreen(successPrevScreen);
+                }
+
+
                 break;
             case 1:
                 this.mc.displayGuiScreen(failPrevScreen);
@@ -60,6 +70,15 @@ final class GuiLogin extends GuiScreen {
             case 2:
                 this.save.checked = !this.save.checked;
                 break;
+            case 4:
+                Minecraft.getMinecraft().displayGuiScreen(new GuiToken(successPrevScreen, Minecraft.getMinecraft().currentScreen));
+                break;
+            case 5: {
+                GuiMicrosoft gM = new GuiMicrosoft(successPrevScreen);
+                Minecraft.getMinecraft().displayGuiScreen(gM);
+                gM.safeAuthFlow();
+                break;
+            }
         }
 
     }
@@ -108,19 +127,14 @@ final class GuiLogin extends GuiScreen {
         this.save = new GuiCheckbox(2, this.width / 2 - 155, this.basey + 85, "Save Password to Config (WARNING: SECURITY RISK!)");
         this.buttonList.add(this.save);
 
-        if (!LiteModReAuth.offlineModeEnabled) {
-            this.login = new GuiButton(0, this.width / 2 - 155, this.basey + 105, 153, 20, "Login");
-            this.cancel = new GuiButton(1, this.width / 2 + 2, this.basey + 105, 155, 20, "Cancel");
-            this.buttonList.add(this.login);
-            this.buttonList.add(this.cancel);
-        } else {
-            this.login = new GuiButton(0, this.width / 2 - 155, this.basey + 105, 100, 20, "Login");
-            this.offline = new GuiButton(3, this.width / 2 - 50, this.basey + 105, 100, 20, "Play Offline");
-            this.cancel = new GuiButton(1, this.width / 2 + 55, this.basey + 105, 100, 20, "Cancel");
-            this.buttonList.add(this.login);
-            this.buttonList.add(this.cancel);
-            this.buttonList.add(this.offline);
-        }
+        this.login = new GuiButton(0, this.width / 2 - 155, this.basey + 105, 100, 20, "Login");
+        this.offline = new GuiButton(3, this.width / 2 - 50, this.basey + 105, 100, 20, "Play Offline");
+        this.cancel = new GuiButton(1, this.width / 2 + 55, this.basey + 105, 100, 20, "Cancel");
+        addButton(new GuiImageButton(5, this.width - 50, this.height - 25, 20, 20, "", new ResourceLocation("reauth", "textures/microsoft.png")));
+        addButton(new GuiImageButton(4, this.width - 25, this.height - 25, 20, 20, "", new ResourceLocation("reauth", "textures/key.png")));
+        this.buttonList.add(this.login);
+        this.buttonList.add(this.cancel);
+        this.buttonList.add(this.offline);
     }
 
     @Override
@@ -155,7 +169,11 @@ final class GuiLogin extends GuiScreen {
      */
     private boolean login() {
         try {
-            Secure.login(this.username.getText(), this.pw.getPW(), this.save.checked);
+            if (startingAccount != null) {
+                Secure.login(this.username.getText(), this.pw.getPW(), this.save.checked, startingAccount.AccUUID);
+            } else {
+                Secure.login(this.username.getText(), this.pw.getPW(), this.save.checked, null);
+            }
             this.message = (char) 167 + "aLogin successful!";
             return true;
         } catch (AuthenticationException e) {
@@ -183,7 +201,12 @@ final class GuiLogin extends GuiScreen {
             return false;
         }
         try {
-            Secure.offlineMode(username);
+            if (startingAccount != null) {
+                Secure.offlineMode(username, startingAccount.AccUUID);
+            } else {
+                Secure.offlineMode(username, "");
+            }
+
             return true;
         } catch (Exception e) {
             this.message = (char) 167 + "4Error: Something went wrong!";

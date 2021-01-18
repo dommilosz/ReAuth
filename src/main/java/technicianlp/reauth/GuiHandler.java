@@ -42,6 +42,7 @@ public final class GuiHandler {
             gui.drawString(Minecraft.getMinecraft().fontRenderer, "Online:", 110, 10, 0xFFFFFFFF);
             ValidationStatus state = status.get();
             gui.drawString(Minecraft.getMinecraft().fontRenderer, (bold ? ChatFormatting.BOLD : "") + state.text, 145, 10, state.color);
+            gui.drawString(Minecraft.getMinecraft().fontRenderer, "("+Minecraft.getMinecraft().getSession().getUsername()+")", 160, 10, 0xFFFFFFFF);
         }
     }
 
