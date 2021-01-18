@@ -256,4 +256,9 @@ final class GuiMicrosoft extends GuiScreen {
         super.onGuiClosed();
         Keyboard.enableRepeatEvents(false);
     }
+
+    @Override
+    protected void keyTyped(char p_keyTyped_1_, int p_keyTyped_2_) throws IOException {
+
+    }
 }
