@@ -7,20 +7,29 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
+import net.minecraft.client.resources.I18n;
 import org.lwjgl.input.Keyboard;
 
 import java.awt.*;
 import java.io.IOException;
 import java.util.Base64;
 
+import static technicianlp.reauth.Utils.alignButtons;
+
 final class GuiPopup extends GuiScreen {
 
     private String yesTxt;
     private String noTxt;
+    private String aTxt;
+    private String bTxt;
+    private String cTxt;
+
+
     private GuiScreen successPrevScreen;
     private GuiButton okBtn;
 
     public static boolean response = false;
+    public static int response3Optn = -1;
     public static boolean complete = false;
     public static String type = "popup";
 
@@ -36,7 +45,8 @@ final class GuiPopup extends GuiScreen {
         this.noTxt = null;
         complete = false;
         response = false;
-        type = "popup";
+        type =  Type.TypeOk;
+        response3Optn = -1;
     }
 
     GuiPopup(GuiScreen successPrevScreen, String msg, String yes, String no) {
@@ -48,12 +58,35 @@ final class GuiPopup extends GuiScreen {
         this.message = msg;
         this.yesTxt = yes;
         this.noTxt = no;
-        type = "yesno";
+        type =  Type.TypeYesNo;
+        response3Optn = -1;
+    }
+
+    public GuiPopup(GuiScreen successPrevScreen, String msg, String a, String b, String c) {
+        complete = false;
+        response = false;
+        this.mc = Minecraft.getMinecraft();
+        this.fontRenderer = mc.fontRenderer;
+        aTxt = a;
+        bTxt = b;
+        cTxt = c;
+        this.message = msg;
+        this.successPrevScreen = successPrevScreen;
+        type = Type.Type3Optn;
+        response3Optn = -1;
     }
 
     public static void DoYesNo(String msg, String yes, String no) {
         Minecraft mc = Minecraft.getMinecraft();
         mc.displayGuiScreen(new GuiPopup(mc.currentScreen, msg, yes, no));
+    }
+    public static void DoNormal(String msg) {
+        Minecraft mc = Minecraft.getMinecraft();
+        mc.displayGuiScreen(new GuiPopup(mc.currentScreen, msg));
+    }
+    public static void Do3Options(String msg, String a, String b,String c) {
+        Minecraft mc = Minecraft.getMinecraft();
+        mc.displayGuiScreen(new GuiPopup(mc.currentScreen, msg, a, b,c));
     }
 
     public static void WaitForUserAction() {
@@ -65,6 +98,13 @@ final class GuiPopup extends GuiScreen {
             }
         }
     }
+    public static void WaitForUserAction(Runnable callback) {
+        Thread t = new Thread(() -> {
+            WaitForUserAction();
+            callback.run();
+        });
+        t.start();
+    }
 
 
     @Override
@@ -75,12 +115,20 @@ final class GuiPopup extends GuiScreen {
                 this.mc.displayGuiScreen(successPrevScreen);
                 complete = true;
                 response = true;
+                response3Optn = 0;
                 break;
             }
             case 2: {
                 this.mc.displayGuiScreen(successPrevScreen);
                 complete = true;
                 response = false;
+                response3Optn = 1;
+                break;
+            }
+            case 3: {
+                this.mc.displayGuiScreen(successPrevScreen);
+                complete = true;
+                response3Optn = 2;
                 break;
             }
         }
@@ -113,13 +161,26 @@ final class GuiPopup extends GuiScreen {
         Keyboard.enableRepeatEvents(true);
 
         this.basey = this.height / 2 - 110 / 2;
-        if(yesTxt==null&&noTxt==null){
+        if(type.equals(Type.TypeOk)){
             this.okBtn = new GuiButton(0, this.width / 2 - 50, this.basey + 105, 100, 20, "OK");
             this.buttonList.add(this.okBtn);
-        }else {
-            addButton(new GuiButton(1, this.width / 2 - 50-53, this.basey + 105, 100, 20, yesTxt));
-            addButton(new GuiButton(2, this.width / 2 - 50+53, this.basey + 105, 100, 20, noTxt));
+        }if(type.equals(Type.TypeYesNo)) {
+            GuiButton b1 = new GuiButton(1, this.width / 2 - 50-53, this.basey + 105, 100, 20, yesTxt);
+            GuiButton b2 = new GuiButton(2, this.width / 2 - 50+53, this.basey + 105, 100, 20, noTxt);
+            alignButtons(this.width,b1,b2);
+            addButton(b1);
+            addButton(b2);
 
+
+        }if(type.equals(Type.Type3Optn)) {
+            GuiButton b1 = (new GuiButton(1, this.width / 2 - 156, this.basey + 105, 100, 20, aTxt));
+            GuiButton b2 =(new GuiButton(2, this.width / 2 - 53, this.basey + 105, 100, 20, bTxt));
+            GuiButton b3 =(new GuiButton(3, this.width / 2 + 50, this.basey + 105, 100, 20, cTxt));
+
+            alignButtons(this.width,b1,b2,b3);
+            addButton(b1);
+            addButton(b2);
+            addButton(b3);
         }
 
     }
@@ -140,5 +201,11 @@ final class GuiPopup extends GuiScreen {
         super.onGuiClosed();
         Keyboard.enableRepeatEvents(false);
         complete = true;
+    }
+
+    public static class Type {
+        public static String Type3Optn = "3optn";
+        public static String TypeYesNo = "yesno";
+        public static String TypeOk = "popup";
     }
 }

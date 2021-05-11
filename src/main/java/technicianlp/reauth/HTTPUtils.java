@@ -13,6 +13,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
+import java.util.Base64;
 import java.util.List;
 
 public class HTTPUtils {
@@ -50,4 +51,12 @@ public class HTTPUtils {
             return (EntityUtils.toString(response.getEntity()));
         }
     }
+
+    public static String Base64Encode(String s){
+        return new String(Base64.getEncoder().encode(s.getBytes()));
+    }
+    public static String Base64Decode(String s){
+        return new String(Base64.getDecoder().decode(s));
+    }
+
 }

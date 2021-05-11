@@ -62,11 +62,11 @@ public final class GuiHandler {
         status.invalidate();
     }
 
-    private enum ValidationStatus {
+    enum ValidationStatus {
         Unknown("?", Color.GRAY.getRGB()), Valid("\u2714", Color.GREEN.getRGB()), Invalid("\u2718", Color.RED.getRGB());
 
-        private final String text;
-        private final int color;
+        public final String text;
+        public final int color;
 
         ValidationStatus(String text, int color) {
             this.text = text;

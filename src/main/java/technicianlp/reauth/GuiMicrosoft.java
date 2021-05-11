@@ -6,12 +6,12 @@ import net.minecraft.client.gui.GuiScreen;
 import org.lwjgl.input.Keyboard;
 
 import java.awt.*;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
 import java.io.IOException;
 import java.net.URI;
 
 import static technicianlp.reauth.MSAuth.*;
+import static technicianlp.reauth.Utils.alignButtons;
+import static technicianlp.reauth.Utils.copyString;
 
 final class GuiMicrosoft extends GuiScreen {
 
@@ -23,6 +23,7 @@ final class GuiMicrosoft extends GuiScreen {
     private GuiButton copyBtn;
 
     private String message = "";
+    private boolean exception = false;
     int basey;
 
     GuiMicrosoft(GuiScreen successPrevScreen) {
@@ -56,9 +57,7 @@ final class GuiMicrosoft extends GuiScreen {
                 }
                 break;
             case 2:
-                StringSelection stringSelection = new StringSelection(url);
-                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-                clipboard.setContents(stringSelection, null);
+                copyString(url);
                 break;
         }
 
@@ -103,6 +102,7 @@ final class GuiMicrosoft extends GuiScreen {
     }
     timeMeasureUtil tms;
     public void authFlowFromATR(AuthTokenResponse atr) throws IOException, InterruptedException {
+        message = "Using ATR to login with XBL";
         if (atr.error != null || atr.access_token == null) {
             throw new IOException("Authentication Error");
         }
@@ -126,8 +126,7 @@ final class GuiMicrosoft extends GuiScreen {
             return;
         }
         message = "Checking Game Ownership";
-        MCApi.ownershipReq ownerReq = MCApi.checkGameOwnership(mcauth.access_token);
-        if(ownerReq.items.length<=0){
+        if(!MCApi.checkGameOwnership(mcauth.access_token)){
             message = "You don't have the game on your Microsoft Account";
             cancelAuth();
         }
@@ -135,66 +134,80 @@ final class GuiMicrosoft extends GuiScreen {
             return;
         }
         message = "Using Token";
-        Secure.Account a = Secure.microsoft(mcauth.access_token, atr.refresh_token, startingAccount!=null? startingAccount.AccUUID : null);
+        Secure.Account a = Secure.microsoft(mcauth.access_token, atr.refresh_token, startingAccount!=null? startingAccount.getIndex() : null);
         message = "DONE";
         Minecraft.getMinecraft().displayGuiScreen(new GuiPopup(successPrevScreen, "Logged in as:\n" + a.getDisplayName()+"\n"+"Time Took: "+tms.getMeasureFormated()));
     }
 
     public void safeAuthFlow() {
-        try {
-            Runnable r = new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        authFlow();
-                        if (cancel) {
-                            message += "\n" + "Cancelled";
-                            Minecraft.getMinecraft().displayGuiScreen(new GuiPopup(successPrevScreen, message));
-                        }
-
-                    } catch (Exception e) {
-                        message += "\n" + e.getMessage();
-                        cancelAuth();
-                        Minecraft.getMinecraft().displayGuiScreen(new GuiPopup(successPrevScreen, message));
-
-                    }
+        safeAuthAny(()->{
+            try{
+                authFlow();
+                if (cancel) {
+                    message += "\n" + "Cancelled";
+                    Minecraft.getMinecraft().displayGuiScreen(new GuiPopup(successPrevScreen, message));
                 }
-            };
-            Thread t = new Thread(r);
-            t.start();
-        } catch (Exception e) {
-            message += "\n" + e.getMessage();
-            cancelAuth();
-            Minecraft.getMinecraft().displayGuiScreen(new GuiPopup(successPrevScreen, message));
+            }catch (Exception ex){
+                handleError(ex);
+            }
+        });
+    }
 
+    public void safeAuthAny(Runnable r){
+        try{
+            new Thread(r).start();
+        }catch (Exception ex){
+            message += "\n" + ex.getMessage();
+            cancelAuth();
+            exception = true;
+
+            Minecraft.getMinecraft().displayGuiScreen(new GuiPopup(successPrevScreen, message));
         }
     }
 
     public void safeAuthFlow(AuthTokenResponse atr) {
-        try {
-            Runnable r = new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        authFlowFromATR(atr);
-                        if (cancel)
-                            message = "Cancelled";
-                    } catch (Exception e) {
-                        message += "\n" + e.getMessage();
-                        cancelAuth();
-                    }
+        safeAuthAny(()->{
+            try{
+                authFlowFromATR(atr);
+                if (cancel) {
+                    message += "\n" + "Cancelled";
+                    Minecraft.getMinecraft().displayGuiScreen(new GuiPopup(successPrevScreen, message));
                 }
-            };
-            Thread t = new Thread(r);
-            t.start();
-        } catch (Exception e) {
-            message += "\n" + e.getMessage();
-            cancelAuth();
+            }catch (Exception ex){
+                handleError(ex);
+            }
+        });
+    }
+    public void handleError(Exception ex){
+        message += "\n" + ex.getMessage();
+        exception = true;
+        cancelAuth();
+        GuiPopup.DoYesNo(message,"OK","ReAuth");
+
+        GuiPopup.WaitForUserAction();
+
+        if(GuiPopup.response){
+            mc.displayGuiScreen(successPrevScreen);
+        }else {
+            GuiMicrosoft gM = new GuiMicrosoft(successPrevScreen);
+            Minecraft.getMinecraft().displayGuiScreen(gM);
+            gM.safeAuthFlow();
         }
     }
 
     public void cancelAuth() {
+        if(exception){
+            mc.displayGuiScreen(successPrevScreen);
+            return;
+        }
         cancel = true;
+        if(Keyboard.isKeyDown(Keyboard.KEY_LSHIFT)&&Keyboard.isKeyDown(Keyboard.KEY_LCONTROL)){
+            message += "\n" + "Force Cancelled";
+            Minecraft.getMinecraft().displayGuiScreen(new GuiPopup(successPrevScreen, message));
+
+            return;
+        }
+        if(InternalHTTPServer.server!=null)
         InternalHTTPServer.server.stop(0);
     }
 
@@ -212,7 +225,10 @@ final class GuiMicrosoft extends GuiScreen {
         this.drawCenteredString(this.fontRenderer, "Time: "+tms.getMeasureFormated(), this.width / 2, this.basey - 20,
                 Color.WHITE.getRGB());
 
-        this.buttonList.removeIf(btn -> btn.id == 1 || btn.id == 2);
+        this.drawString(this.fontRenderer, "Tip: Hold Ctrl+Shift and click Cancel to force it.", 5, this.height-15,
+                0x777777);
+
+        this.buttonList.removeIf(btn -> btn.id == 1 || btn.id == 2 || btn.id==3);
         if (awaitingBrowserAuth) {
             this.openBtn = new GuiButton(1, this.width / 2 - 50 + 53, this.basey + 55, 100, 20, "Open Browser");
             this.buttonList.add(this.openBtn);

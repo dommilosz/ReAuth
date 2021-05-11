@@ -143,7 +143,7 @@ final class GuiToken extends GuiScreen {
      */
     private boolean useToken() {
         try {
-            Secure.token(this.token.getText(), startingAccount!=null?startingAccount.AccUUID:null);
+            Secure.token(this.token.getText(), startingAccount!=null?startingAccount.getIndex():null);
             this.message = (char) 167 + "aLogin successful!";
             return true;
         } catch (AuthenticationException e) {

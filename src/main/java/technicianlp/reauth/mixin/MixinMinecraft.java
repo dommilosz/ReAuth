@@ -14,12 +14,6 @@ public class MixinMinecraft implements ISessionHolder {
     private Session session;
 
     @Override
-    @Shadow
-    public Session getSession() {
-        return null;
-    }
-
-    @Override
     public void setSession(Session session) {
         this.session = session;
     }

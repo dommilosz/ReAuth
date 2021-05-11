@@ -14,6 +14,7 @@ import org.apache.logging.log4j.Logger;
 import com.mumfrey.liteloader.LiteMod;
 import com.mumfrey.liteloader.core.LiteLoader;
 import static technicianlp.reauth.Secure.Account;
+import static technicianlp.reauth.Secure.accounts;
 
 public class LiteModReAuth implements LiteMod {
 
@@ -56,16 +57,16 @@ public class LiteModReAuth implements LiteMod {
                 numAccounts = 1000;
             Gson g = new Gson();
             Secure.accounts.clear();
-            configAccount[] accounts = g.fromJson(config.getProperty("accounts_data"), configAccount[].class);
-            Secure.accounts = configAccount.toSecureAccounts(accounts);
+            Secure.accounts = new ArrayList<>(Arrays.asList (g.fromJson(config.getProperty("accounts_data"), Account[].class)));
+
+            accounts.removeIf(a -> a.accountType == null || a.getUsername() == null);
 
             LiteModReAuth.offlineModeEnabled = Boolean.parseBoolean(config.getProperty("offlineModeEnabled", "false"));
 
             GuiHandler.enabled = Boolean.parseBoolean(config.getProperty("validatorEnabled", "true"));
             GuiHandler.bold = Boolean.parseBoolean(config.getProperty("validatorBold", "true"));
-
         } catch (NumberFormatException e) {
-            return;
+
         }
     }
 
@@ -74,7 +75,7 @@ public class LiteModReAuth implements LiteMod {
         config.setProperty("accounts", String.valueOf(Secure.accounts.size()));
 
         Gson g = new Gson();
-        config.setProperty("accounts_data", g.toJson(configAccount.getConfigAccounts()));
+        config.setProperty("accounts_data", g.toJson(accounts.toArray()));
 
         config.setProperty("offlineModeEnabled", String.valueOf(LiteModReAuth.offlineModeEnabled));
 
@@ -88,37 +89,4 @@ public class LiteModReAuth implements LiteMod {
             e.printStackTrace();
         }
     }
-
-    public static class configAccount{
-        public String key;
-        public Secure.Account account;
-
-        public configAccount(String key, Account account) {
-            this.key = key;
-            this.account = account;
-        }
-
-        public static configAccount[] getConfigAccounts(){
-            configAccount[] accountsArr = new configAccount[Secure.accounts.size()];
-            final int[] i = {0};
-            Secure.accounts.forEach((key, value)-> {
-                accountsArr[i[0]] = new configAccount(key,value);
-                i[0]++;
-            });
-            return accountsArr;
-        }
-
-        public static Map<String, Account> toSecureAccounts(configAccount[] accounts) {
-            Map<String, Account> accountMap = new LinkedHashMap<>();
-            for (configAccount acc:accounts){
-                if(acc.account.AccUUID!=null){
-                    acc.account.setLastQuery(0);
-                    accountMap.put(acc.key, acc.account);
-                }
-
-            }
-            return accountMap;
-        }
-    }
-
 }

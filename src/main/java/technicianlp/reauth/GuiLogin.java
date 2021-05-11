@@ -49,16 +49,12 @@ final class GuiLogin extends GuiScreen {
         switch (b.id) {
             case 0:
                 if (login()) {
-                    if (startingAccount != null)
-                        Secure.accounts.remove(startingAccount.getUuid().toString(), startingAccount);
                     this.mc.displayGuiScreen(successPrevScreen);
                 }
 
                 break;
             case 3:
                 if (playOffline()) {
-                    if (startingAccount != null)
-                        Secure.accounts.remove(startingAccount.getUuid().toString(), startingAccount);
                     this.mc.displayGuiScreen(successPrevScreen);
                 }
 
@@ -79,6 +75,9 @@ final class GuiLogin extends GuiScreen {
                 gM.safeAuthFlow();
                 break;
             }
+            case 6:
+                mc.displayGuiScreen(new GuiImport(successPrevScreen));
+                break;
         }
 
     }
@@ -132,6 +131,7 @@ final class GuiLogin extends GuiScreen {
         this.cancel = new GuiButton(1, this.width / 2 + 55, this.basey + 105, 100, 20, "Cancel");
         addButton(new GuiImageButton(5, this.width - 50, this.height - 25, 20, 20, "", new ResourceLocation("reauth", "textures/microsoft.png")));
         addButton(new GuiImageButton(4, this.width - 25, this.height - 25, 20, 20, "", new ResourceLocation("reauth", "textures/key.png")));
+        addButton(new GuiImageButton(6, this.width - 75, this.height - 25, 20, 20, "", new ResourceLocation("reauth", "textures/import.png")));
         this.buttonList.add(this.login);
         this.buttonList.add(this.cancel);
         this.buttonList.add(this.offline);
@@ -170,9 +170,9 @@ final class GuiLogin extends GuiScreen {
     private boolean login() {
         try {
             if (startingAccount != null) {
-                Secure.login(this.username.getText(), this.pw.getPW(), this.save.checked, startingAccount.AccUUID);
+                Secure.login(this.username.getText(), this.pw.getPW(), this.save.checked, startingAccount.getIndex());
             } else {
-                Secure.login(this.username.getText(), this.pw.getPW(), this.save.checked, null);
+                Secure.login(this.username.getText(), this.pw.getPW(), this.save.checked, -1);
             }
             this.message = (char) 167 + "aLogin successful!";
             return true;
@@ -202,9 +202,9 @@ final class GuiLogin extends GuiScreen {
         }
         try {
             if (startingAccount != null) {
-                Secure.offlineMode(username, startingAccount.AccUUID);
+                Secure.offlineMode(username, startingAccount.getIndex());
             } else {
-                Secure.offlineMode(username, "");
+                Secure.offlineMode(username, -1);
             }
 
             return true;

@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.base.Charsets;
+import com.google.gson.Gson;
 import com.mojang.authlib.Agent;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.GameProfileRepository;
@@ -27,7 +28,7 @@ final class Secure {
     /**
      * Username/email -> password map
      */
-    static Map<String, Account> accounts = new LinkedHashMap<>();
+    static ArrayList<Account> accounts = new ArrayList<>();
     static String offlineUsername = "";
 
     /**
@@ -54,7 +55,7 @@ final class Secure {
     /**
      * Logs you in; replaces the Session in your client; and saves to config
      */
-    static void login(String user, char[] pw, boolean savePassToConfig, String editingUUID) throws AuthenticationException {
+    static void login(String user, char[] pw, boolean savePassToConfig, int editingIndex) throws AuthenticationException {
         /* set credentials */
         Secure.yua.setUsername(user);
         Secure.yua.setPassword(new String(pw));
@@ -79,7 +80,7 @@ final class Secure {
         Account a = new Account(user, savePassToConfig ? pw : null, uuid, username);
         a.Token = access;
 
-        saveAccount(editingUUID, a);
+        saveAccount(editingIndex, a);
 
 
     }
@@ -89,53 +90,62 @@ final class Secure {
             @Override
             public void run() {
                 AtomicBoolean replace = new AtomicBoolean(false);
+                AtomicBoolean duplicate = new AtomicBoolean(false);
                 AtomicBoolean exists = new AtomicBoolean(false);
                 AtomicReference<Account> existing = new AtomicReference<>();
-                Secure.accounts.forEach((key, value) -> {
+                for (Account value : Secure.accounts) {
                     if (acc.uuid.equals(value.uuid)) {
                         exists.set(true);
                         existing.set(value);
-                        if (!GuiPopup.type.equals("yesno")) GuiPopup.WaitForUserAction();
-                        GuiPopup.DoYesNo("Account Already Exists\nDo You want to replace it?", "Replace", "Cancel");
+                        if (!GuiPopup.type.equals(GuiPopup.Type.Type3Optn)) GuiPopup.WaitForUserAction();
+                        GuiPopup.Do3Options("Account Already Exists\nDo You want to replace it?", "Replace", "Duplicate", "Do Nothing");
 
                         GuiPopup.WaitForUserAction();
-                        replace.set(GuiPopup.response);
+                        duplicate.set(false);
+                        replace.set(false);
+                        if (GuiPopup.response3Optn == 0) replace.set(true);
+                        if (GuiPopup.response3Optn == 1) {
+                            duplicate.set(true);
+                        }
                     }
-                });
+                }
                 if (replace.get() && exists.get()) {
-                    editAccount(existing.get().AccUUID, acc);
+                    editAccount(accounts.indexOf(existing.get()), acc);
+                    return;
+                }
+                if (duplicate.get() && exists.get()) {
+                    Secure.accounts.add(acc);
+                    LiteModReAuth.saveConfig();
                     return;
                 }
                 if (exists.get()) return;
-                String uuid = UUID.randomUUID().toString();
-                acc.AccUUID = uuid;
-                Secure.accounts.put(uuid, acc);
+                Secure.accounts.add(acc);
                 LiteModReAuth.saveConfig();
             }
         }).start();
     }
 
-    static void editAccount(String uuid, Account newAcc) {
-        Secure.accounts.put(uuid, newAcc);
-        newAcc.AccUUID = uuid;
+    static void editAccount(int index, Account newAcc) {
+        Secure.accounts.set(index, newAcc);
+
         LiteModReAuth.saveConfig();
     }
 
-    static void saveAccount(String uuid, Account acc) {
-        if (uuid != null) {
+    static void saveAccount(int uuid, Account acc) {
+        if (uuid >= 0) {
             editAccount(uuid, acc);
         } else {
             addAccount(acc);
         }
     }
 
-    static boolean token(String token, String editingUUID) throws AuthenticationException, IOException {
+    static boolean token(String token, int editingIndex) throws AuthenticationException, IOException {
         try {
             MCApi.MCProfile profile = MCApi.getProfile(token);
             if (profile.name == null || profile.id == null) throw new IOException();
             Sessionutil.set(new Session(profile.name, profile.id, token, "mojang"));
             LiteModReAuth.log.info("Login successful!");
-            saveAccount(editingUUID, new Account(token));
+            saveAccount(editingIndex, new Account(token));
             return true;
         } catch (Exception ex) {
             return false;
@@ -157,23 +167,24 @@ final class Secure {
         }
     }
 
-    static void offlineMode(String username, String editingUUID) {
+    static void offlineMode(String username, int editingIndex) {
         /* Create offline uuid */
         UUID uuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(Charsets.UTF_8));
         Sessionutil.set(new Session(username, uuid.toString(), "invalid", "legacy"));
         LiteModReAuth.log.info("Offline Username set!");
         Secure.offlineUsername = username;
-        saveAccount(editingUUID, new Account(username, uuid.toString()));
+
+        saveAccount(editingIndex, new Account(username, uuid.toString()));
 
     }
 
-    static Account microsoft(String token, String refreshToken, String editingUUID) throws IOException {
+    static Account microsoft(String token, String refreshToken, int editingIndex) throws IOException {
         MCApi.MCProfile profile = MCApi.getProfile(token);
 
         Sessionutil.set(new Session(profile.name, profile.id, token, "microsoft"));
         LiteModReAuth.log.info("Login successful!");
         Account a = Account.accountFromMicrosoft(token, refreshToken);
-        saveAccount(editingUUID, a);
+        saveAccount(editingIndex, a);
         return a;
     }
 
@@ -214,7 +225,6 @@ final class Secure {
         private String username;
         private char[] password;
         private UUID uuid;
-        public String AccUUID;
         private String displayName;
         private long lastQuery = 0;
 
@@ -235,6 +245,7 @@ final class Secure {
                 this.uuid = UUIDFromShortString(profile.id);
                 this.displayName = profile.name;
                 this.Token = token;
+                this.accountType = "token";
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -256,7 +267,7 @@ final class Secure {
         Account(String username, String uuid) {
             this.uuid = UUID.fromString(uuid);
             this.displayName = username;
-
+            accountType = "offline";
         }
 
         public static Account accountFromMicrosoft(String token, String refreshToken) {
@@ -312,13 +323,13 @@ final class Secure {
                     if (this.getPassword() == null) {
                         Minecraft.getMinecraft().displayGuiScreen(new GuiLogin(Minecraft.getMinecraft().currentScreen, Minecraft.getMinecraft().currentScreen));
                     } else
-                        Secure.login(this.getUsername(), this.getPassword(), true, this.AccUUID);
+                        Secure.login(this.getUsername(), this.getPassword(), true, this.getIndex());
                 }
                 if (accountType.equals("token")) {
                     Secure.useToken(this.Token, this);
                 }
                 if (accountType.equals("offline")) {
-                    Secure.offlineMode(this.username, this.AccUUID);
+                    Secure.offlineMode(this.displayName, this.getIndex());
                 }
                 if (accountType.equals("microsoft")) {
                     try {
@@ -326,7 +337,7 @@ final class Secure {
                     } catch (Exception ex) {
 
                         MSAuth.AuthTokenResponse atr = MSAuth.getRefreshAuthToken(this.MS_refreshToken);
-                        GuiMicrosoft gM = new GuiMicrosoft(Minecraft.getMinecraft().currentScreen,this);
+                        GuiMicrosoft gM = new GuiMicrosoft(Minecraft.getMinecraft().currentScreen, this);
                         Minecraft.getMinecraft().displayGuiScreen(gM);
                         gM.safeAuthFlow(atr);
                     }
@@ -334,10 +345,52 @@ final class Secure {
             } catch (Exception ex) {
             }
         }
+
+        public int getIndex() {
+            return accounts.indexOf(this);
+        }
+
+        public String deserialise() {
+            try {
+                Gson g = new Gson();
+                return g.toJson(this);
+            } catch (Exception ex) {
+                return "ERROR";
+            }
+        }
+
+        public static Account serialise(String json) {
+            try {
+                Gson g = new Gson();
+                return g.fromJson(json, Account.class);
+            } catch (Exception ex) {
+                return null;
+            }
+        }
     }
 
     public static UUID UUIDFromShortString(String uuid) {
-        String uuidLong = uuid.substring(0, 8) + "-" + uuid.substring(8, 12) + "-" + uuid.substring(12, 16) + "-" + uuid.substring(16, 20) + "-" + uuid.substring(20);
-        return UUID.fromString(uuidLong);
+        try {
+            String uuidLong = uuid.substring(0, 8) + "-" + uuid.substring(8, 12) + "-" + uuid.substring(12, 16) + "-" + uuid.substring(16, 20) + "-" + uuid.substring(20);
+            if (uuid.length() == 36) uuidLong = uuid;
+            return UUID.fromString(uuidLong);
+        } catch (Exception ex) {
+            return UUID.randomUUID();
+        }
+    }
+
+    public static Secure.Account getCurrentAccount() {
+        try {
+            UUID current = UUIDFromShortString(Minecraft.getMinecraft().getSession().getPlayerID());
+            AtomicReference<Account> a = new AtomicReference<>();
+            for (Account value : accounts) {
+                if (value.uuid.equals(current)) a.set(value);
+            }
+            if (a.get() != null)
+                return a.get();
+        } catch (Exception ex) {
+            return Secure.accounts.get(0);
+        }
+        return Secure.accounts.get(0);
     }
 }
