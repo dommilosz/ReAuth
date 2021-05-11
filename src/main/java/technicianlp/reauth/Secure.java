@@ -2,6 +2,7 @@ package technicianlp.reauth;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -79,6 +80,16 @@ final class Secure {
         /* save username and password to config */
         Account a = new Account(user, savePassToConfig ? pw : null, uuid, username);
         a.Token = access;
+
+        saveAccount(editingIndex, a);
+    }
+
+    static void loginCustom(String server,String user, char[] pw, boolean savePassToConfig, int editingIndex) throws AuthenticationException, IOException {
+        CustomAuth.CustomAuthResponse response = CustomAuth.authenticate(server, user, String.valueOf(pw));
+
+        /* save username and password to config */
+        Account a = new Account(server,user, savePassToConfig ? pw : null, UUIDFromShortString(response.selectedProfile.id), response.selectedProfile.name);
+        a.Token = response.accessToken;
 
         saveAccount(editingIndex, a);
 
@@ -231,6 +242,16 @@ final class Secure {
         public String accountType = "mojang";
         public String MS_refreshToken;
         public String Token;
+        public String authserver;
+
+        Account(String authServer,String username, char[] password, UUID uuid, String displayName) {
+            this.username = username;
+            this.password = password;
+            this.uuid = uuid;
+            this.displayName = displayName;
+            accountType = "custom";
+            this.authserver = authServer;
+        }
 
         Account(String username, char[] password, UUID uuid, String displayName) {
             this.username = username;
@@ -342,7 +363,17 @@ final class Secure {
                         gM.safeAuthFlow(atr);
                     }
                 }
-            } catch (Exception ex) {
+                if (accountType.equals("custom")) {
+                    if (this.Token != null) {
+                        if (Secure.useToken(this.Token, this)) return;
+                    }
+                    if (this.getPassword() == null) {
+                        Minecraft.getMinecraft().displayGuiScreen(new GuiCustom(Minecraft.getMinecraft().currentScreen, Minecraft.getMinecraft().currentScreen));
+                    } else
+                        Secure.loginCustom(authserver,this.getUsername(), this.getPassword(), true, this.getIndex());
+
+                }
+            } catch (Exception ignored) {
             }
         }
 

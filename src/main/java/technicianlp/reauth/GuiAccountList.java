@@ -225,7 +225,7 @@ public class GuiAccountList extends GuiScreen {
                 return;
             }
 
-            String accTypeFileName = "";
+            String accTypeFileName = "textures/no_texture.png";
             switch (account.accountType) {
                 case "mojang":
                     accTypeFileName = "textures/mojang.png";
@@ -238,6 +238,9 @@ public class GuiAccountList extends GuiScreen {
                     break;
                 case "offline":
                     accTypeFileName = "textures/grass_side.png";
+                    break;
+                case "custom":
+                    accTypeFileName = "textures/custom_yellow.png";
                     break;
             }
             ResourceLocation accTypeIcon = new ResourceLocation("reauth", accTypeFileName);
